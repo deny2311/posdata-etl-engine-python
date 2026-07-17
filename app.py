@@ -1,14 +1,17 @@
 import streamlit as st
 
+from app.core.version import APP_NAME
+from app.core.version import APP_VERSION
+
 st.set_page_config(
-    page_title="POSDATA ETL ENGINE",
+    page_title=APP_NAME,
     page_icon="🚀",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
-st.title("🚀 POSDATA ETL ENGINE")
+st.title("🚀 " + APP_NAME)
 
-st.caption("Enterprise ETL Platform")
+st.caption("Version " + APP_VERSION)
 
-st.info("Silakan pilih menu di sidebar.")
+st.success("Sprint 2.1")
