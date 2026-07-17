@@ -1,73 +1,23 @@
 import streamlit as st
-import sys
-import platform
 
-from app.core.config import Config
-from app.core.database import Database
+from app.services.system_check_service import SystemCheckService
+
+from app.ui.render_system_check import (
+    render_application,
+    render_python,
+    render_database,
+    render_storage,
+    render_disk,
+)
 
 st.title("🔎 System Check")
 
-# ======================================
-# APPLICATION
-# ======================================
+service = SystemCheckService()
 
-st.header("Application")
+result = service.run()
 
-st.write("**Name :**", Config.app_name())
-st.write("**Version :**", Config.version())
-st.write("**Environment :**", Config.env())
-
-st.divider()
-
-# ======================================
-# PYTHON
-# ======================================
-
-st.header("Python")
-
-st.write(sys.version)
-
-st.write(platform.platform())
-
-st.divider()
-
-# ======================================
-# DATABASE
-# ======================================
-
-st.header("Database")
-
-db = Database()
-
-status = db.health_check()
-
-if status["connected"]:
-
-    st.success("Database Connected")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-
-        st.write("**Host**")
-        st.write(status["host"])
-
-        st.write("**Database**")
-        st.write(status["database"])
-
-        st.write("**User**")
-        st.write(status["user"])
-
-    with col2:
-
-        st.write("**Version**")
-        st.write(status["version"])
-
-        st.write("**Charset**")
-        st.write(status["charset"])
-
-else:
-
-    st.error("Database Failed")
-
-    st.exception(status["error"])
+render_application(result["application"])
+render_python(result["python"])
+render_database(result["database"])
+render_storage(result["storage"])
+render_disk(result["disk"])
