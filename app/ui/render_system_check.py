@@ -1,107 +1,98 @@
+import platform
+
 import streamlit as st
 
-
-def render_application(data):
-
-    st.header("Application")
-
-    col1, col2, col3 = st.columns(3)
-
-    col1.metric("Application", data["name"])
-    col2.metric("Version", data["version"])
-    col3.metric("Environment", data["environment"])
+from app.core.config import Config
+from app.core.database import Database
+from app.core.storage import Storage
 
 
-def render_python(data):
+def render_application() -> None:
+    """
+    Application information.
+    """
 
-    st.divider()
-
-    st.header("Python")
-
-    col1, col2 = st.columns(2)
-
-    col1.metric("Version", data["version"])
-    col2.metric("Platform", data["platform"])
-
-    with st.expander("Detail"):
-        st.code(data["detail"])
-
-
-def render_database(data):
-
-    st.divider()
-
-    st.header("Database")
-
-    if data["connected"]:
-
-        st.success("🟢 Connected")
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.write("Host")
-            st.write(data["host"])
-
-            st.write("Database")
-            st.write(data["database"])
-
-            st.write("User")
-            st.write(data["user"])
-
-        with col2:
-            st.write("Version")
-            st.write(data["version"])
-
-            st.write("Charset")
-            st.write(data["charset"])
-
-    else:
-
-        st.error(data["error"])
-
-
-def render_storage(data):
-
-    st.divider()
-
-    st.header("Storage")
-
-    col1, col2 = st.columns(2)
-
-    items = list(data.items())
-
-    half = (len(items)+1)//2
-
-    for name, value in items[:half]:
-
-        icon = "🟢" if value["exists"] and value["write"] else "🔴"
-
-        col1.write(f"{icon} {name}")
-
-    for name, value in items[half:]:
-
-        icon = "🟢" if value["exists"] and value["write"] else "🔴"
-
-        col2.write(f"{icon} {name}")
-
-
-def render_disk(data):
-
-    st.divider()
-
-    st.header("Disk")
-
-    gb = 1024**3
-
-    total = data["total"]/gb
-    used = data["used"]/gb
-    free = data["free"]/gb
+    st.subheader("📦 Application")
 
     col1, col2, col3 = st.columns(3)
 
-    col1.metric("Total", f"{total:.2f} GB")
-    col2.metric("Used", f"{used:.2f} GB")
-    col3.metric("Free", f"{free:.2f} GB")
+    with col1:
+        st.metric("App", Config.app_name())
 
-    st.progress(used/total)
+    with col2:
+        st.metric("Version", Config.version())
+
+    with col3:
+        st.metric("Environment", Config.env())
+
+
+def render_python() -> None:
+    """
+    Python runtime information.
+    """
+
+    st.subheader("🐍 Python")
+
+    st.json({
+        "Version": platform.python_version(),
+        "Platform": platform.platform(),
+    })
+
+
+def render_database() -> None:
+    """
+    Database information.
+    """
+
+    st.subheader("🗄 Database")
+
+    db = Database()
+
+    try:
+        result = db.health_check()
+
+        if result.get("connected"):
+            st.success("Database Connected")
+        else:
+            st.error("Database Disconnected")
+
+        st.json(result)
+
+    except Exception as ex:
+        st.exception(ex)
+
+
+def render_storage() -> None:
+    """
+    Storage information.
+    """
+
+    st.subheader("📁 Storage")
+
+    storage = Storage()
+
+    try:
+        result = storage.health_check()
+
+        st.json(result)
+
+    except Exception as ex:
+        st.exception(ex)
+
+
+def render_disk() -> None:
+    """
+    Disk usage.
+    """
+
+    st.subheader("💾 Disk")
+
+    storage = Storage()
+
+    try:
+        result = storage.disk()
+
+        st.json(result)
+
+    except Exception as ex:
+        st.exception(ex)

@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from typing import Any
+from typing import Optional
 
 
 @dataclass
@@ -8,4 +10,8 @@ class EngineResult:
 
     message: str = ""
 
-    data: object = None
+    data: Any = None
+
+    error: Optional[Exception] = None
+
+    duration: float = 0

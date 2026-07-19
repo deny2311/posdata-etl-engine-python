@@ -6,6 +6,16 @@ from app.core.logger import Logger
 
 
 class Storage:
+    """
+    Storage manager.
+
+    Responsible for:
+
+    - Create folders
+    - Health check
+    - Disk usage
+    - Get storage path
+    """
 
     def __init__(self):
 
@@ -25,13 +35,13 @@ class Storage:
 
         }
 
-    # =======================================
-    # CREATE FOLDER
-    # =======================================
+    # ==========================================================
+    # CREATE STORAGE
+    # ==========================================================
 
-    def create(self):
+    def create(self) -> None:
 
-        for name, path in self.paths.items():
+        for _, path in self.paths.items():
 
             if not path.exists():
 
@@ -41,20 +51,20 @@ class Storage:
                 )
 
                 Logger.info(
-                    f"Create Folder : {path}"
+                    f"Create folder : {path}"
                 )
 
-    # =======================================
-    # STORAGE STATUS
-    # =======================================
+    # ==========================================================
+    # HEALTH CHECK
+    # ==========================================================
 
-    def health_check(self):
+    def health_check(self) -> dict:
 
         result = {}
 
         for name, path in self.paths.items():
 
-            result[name] = {
+            status = {
 
                 "exists": path.exists(),
 
@@ -72,19 +82,21 @@ class Storage:
 
                     test.unlink()
 
-                    result[name]["write"] = True
+                    status["write"] = True
 
                 except Exception:
 
-                    result[name]["write"] = False
+                    status["write"] = False
+
+            result[name] = status
 
         return result
 
-    # =======================================
-    # DISK INFO
-    # =======================================
+    # ==========================================================
+    # DISK
+    # ==========================================================
 
-    def disk(self):
+    def disk(self) -> dict:
 
         total, used, free = shutil.disk_usage(".")
 
@@ -97,3 +109,19 @@ class Storage:
             "free": free
 
         }
+
+    # ==========================================================
+    # GET PATH
+    # ==========================================================
+
+    def get(self, name: str) -> Path:
+
+        try:
+
+            return self.paths[name]
+
+        except KeyError:
+
+            raise KeyError(
+                f"Unknown storage path : {name}"
+            )
