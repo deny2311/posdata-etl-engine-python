@@ -3,14 +3,24 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from app.enums import JobStatus
-from app.enums import TransferProtocol
+from app.core import Storage
+from app.enums import JobStatus, TransferProtocol
 
 
 @dataclass
 class DownloadJob:
     """
-    Domain model for downloader engine.
+    ETL Pipeline Job
+
+    One DownloadJob flows through the entire ETL process:
+
+        Download
+            ↓
+        Extract
+            ↓
+        Import
+            ↓
+        Complete
     """
 
     # ==========================================================
@@ -27,10 +37,6 @@ class DownloadJob:
     transfer_name: Optional[str] = None
     protocol: Optional[TransferProtocol] = None
 
-    # ==========================================================
-    # REMOTE
-    # ==========================================================
-
     remote_path: str = ""
     remote_filename: Optional[str] = None
 
@@ -38,14 +44,26 @@ class DownloadJob:
     # LOCAL
     # ==========================================================
 
-    local_directory: Optional[Path] = None
     local_filename: Optional[str] = None
+
+    # ==========================================================
+    # PIPELINE
+    # ==========================================================
+
+    extracted_files: list[Path] = field(default_factory=list)
+
+    imported_files: list[Path] = field(default_factory=list)
+
+    skipped_files: list[Path] = field(default_factory=list)
+
+    warnings: list[str] = field(default_factory=list)
 
     # ==========================================================
     # PROCESS
     # ==========================================================
 
     retry: int = 0
+
     status: JobStatus = JobStatus.WAITING
 
     # ==========================================================
@@ -53,7 +71,9 @@ class DownloadJob:
     # ==========================================================
 
     started_at: Optional[datetime] = None
+
     finished_at: Optional[datetime] = None
+
     duration: float = 0.0
 
     error_message: Optional[str] = None
@@ -62,10 +82,30 @@ class DownloadJob:
     # META
     # ==========================================================
 
-    created_at: datetime = field(default_factory=datetime.now)
+    created_at: datetime = field(
+        default_factory=datetime.now
+    )
 
     # ==========================================================
-    # HELPER
+    # STORAGE
+    # ==========================================================
+
+    @property
+    def download_directory(self) -> Path:
+
+        return Storage().get("download")
+
+    @property
+    def extract_directory(self) -> Path:
+
+        return (
+            Storage().get("extract")
+            /
+            Path(self.local_filename).stem
+        )
+
+    # ==========================================================
+    # FILE
     # ==========================================================
 
     @property
@@ -75,43 +115,71 @@ class DownloadJob:
             return ""
 
         if self.remote_path:
-            return f"{self.remote_path.rstrip('/')}/{self.remote_filename}"
+
+            return (
+                f"{self.remote_path.rstrip('/')}/"
+                f"{self.remote_filename}"
+            )
 
         return self.remote_filename
 
     @property
     def local_file(self) -> Optional[Path]:
 
-        if self.local_directory is None:
+        if not self.local_filename:
+
             return None
 
-        if self.local_filename is None:
-            return None
-
-        return self.local_directory / self.local_filename
+        return (
+            self.download_directory
+            /
+            self.local_filename
+        )
 
     @property
     def filename(self) -> str:
 
         return self.remote_filename or ""
 
+    # ==========================================================
+    # STATE
+    # ==========================================================
+
     @property
     def is_finished(self) -> bool:
 
         return self.status in (
+
             JobStatus.SUCCESS,
+
             JobStatus.FAILED,
-            JobStatus.CANCELLED,
+
+            JobStatus.CANCELLED
+
         )
+
+    # ==========================================================
+    # ACTION
+    # ==========================================================
 
     def reset(self) -> None:
 
         self.retry = 0
+
         self.status = JobStatus.WAITING
 
         self.started_at = None
+
         self.finished_at = None
 
-        self.duration = 0
+        self.duration = 0.0
 
         self.error_message = None
+
+        self.extracted_files.clear()
+
+        self.imported_files.clear()
+
+        self.skipped_files.clear()
+
+        self.warnings.clear()
